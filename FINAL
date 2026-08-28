@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Content Performance Desk</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<style>
+  :root{
+    --ink:#12141A;
+    --ink-raised:#1B1E27;
+    --ink-raised-2:#20232E;
+    --line:#2B2F3A;
+    --bone:#F2F0E9;
+    --dim:#8B90A0;
+    --amber:#FFB92B;
+    --teal:#3ECFA7;
+    --coral:#FF6B57;
+    --blue:#7C9CFF;
+    --purple:#C792EA;
+    --font-display:'Oswald',sans-serif;
+    --font-body:'Inter',sans-serif;
+    --font-mono:'JetBrains Mono',monospace;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--ink);
+    color:var(--bone);
+    font-family:var(--font-body);
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:inherit;}
+
+  /* ---- Ticker ---- */
+  .ticker-wrap{
+    background:#0B0C10;
+    border-bottom:1px solid var(--line);
+    overflow:hidden;
+    white-space:nowrap;
+    position:relative;
+    height:34px;
+    display:flex;
+    align-items:center;
+  }
+  .ticker-wrap::before{
+    content:"LIVE";
+    position:relative;
+    z-index:2;
+    background:var(--coral);
+    color:#0B0C10;
+    font-family:var(--font-mono);
+    font-weight:700;
+    font-size:11px;
+    letter-spacing:0.08em;
+    padding:6px 10px;
+    height:100%;
+    display:flex;
+    align-items:center;
+  }
+  .ticker-track{
+    display:inline-flex;
+    animation:scroll 32s linear infinite;
+    font-family:var(--font-mono);
+    font-size:12px;
+    letter-spacing:0.02em;
+    color:var(--amber);
+    padding-left:16px;
+  }
+  .ticker-track span{margin-right:48px; color:var(--bone);}
+  .ticker-track span b{color:var(--amber);}
+  @keyframes scroll{
+    0%{transform:translateX(0);}
+    100%{transform:translateX(-50%);}
+  }
+  @media (prefers-reduced-motion: reduce){
+    .ticker-track{animation:none;}
+  }
+
+  /* ---- Header ---- */
+  header{
+    padding:28px 32px 0 32px;
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    flex-wrap:wrap;
+    gap:16px;
+    border-bottom:1px solid var(--line);
+    padding-bottom:20px;
+  }
+  .eyebrow{
+    font-family:var(--font-mono);
+    font-size:11px;
+    letter-spacing:0.14em;
+    color:var(--dim);
+    text-transform:uppercase;
+    margin:0 0 6px 0;
+  }
+  h1{
+    font-family:var(--font-display);
+    font-weight:700;
+    font-size:32px;
+    letter-spacing:0.01em;
+    text-transform:uppercase;
+    margin:0;
+  }
+  .editions{
+    display:flex;
+    gap:6px;
+    background:var(--ink-raised);
+    padding:4px;
+    border-radius:2px;
+    border:1px solid var(--line);
+  }
+  .edition-btn{
+    font-family:var(--font-mono);
+    font-size:12px;
+    letter-spacing:0.04em;
+    background:transparent;
+    color:var(--dim);
+    border:none;
+    padding:8px 14px;
+    cursor:pointer;
+    border-radius:2px;
+    text-transform:uppercase;
+  }
+  .edition-btn.active{
+    background:var(--amber);
+    color:#191305;
+    font-weight:700;
+  }
+
+  /* ---- Config Bar ---- */
+  .config{
+    margin:20px 32px 0 32px;
+    background:var(--ink-raised);
+    border:1px solid var(--line);
+    border-radius:3px;
+    padding:14px 16px;
+  }
+  .config summary{
+    cursor:pointer;
+    font-family:var(--font-mono);
+    font-size:12px;
+    color:var(--dim);
+    letter-spacing:0.03em;
+    text-transform:uppercase;
+  }
+  .config-body{
+    display:flex;
+    gap:10px;
+    margin-top:12px;
+    flex-wrap:wrap;
+    align-items:center;
+  }
+  .config-body input{
+    flex:1;
+    min-width:280px;
+    background:var(--ink);
+    border:1px solid var(--line);
+    color:var(--bone);
+    font-family:var(--font-mono);
+    font-size:12px;
+    padding:10px 12px;
+    border-radius:2px;
+  }
+  .config-body button{
+    background:var(--teal);
+    border:none;
+    color:#0B1F19;
+    font-family:var(--font-body);
+    font-weight:700;
+    font-size:13px;
+    padding:10px 18px;
+    border-radius:2px;
+    cursor:pointer;
+  }
+  .config-note{
+    font-size:12px;
+    color:var(--dim);
+    margin:10px 0 0 0;
+    line-height:1.5;
+  }
+  #status{font-family:var(--font-mono); font-size:12px; color:var(--dim); margin-top:8px;}
+
+  /* ---- Expanded Scoreboard Grid ---- */
+  .scoreboard{
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(140px, 1fr));
+    margin:28px 32px 0 32px;
+    border:1px solid var(--line);
+    border-radius:3px;
+    overflow:hidden;
+    background:var(--ink-raised);
+  }
+  .stat{
+    padding:16px 14px;
+    border-right:1px solid var(--line);
+    border-bottom:1px solid var(--line);
+  }
+  .stat-label{
+    font-family:var(--font-mono);
+    font-size:9px;
+    letter-spacing:0.1em;
+    text-transform:uppercase;
+    color:var(--dim);
+    margin-bottom:6px;
+  }
+  .stat-value{
+    font-family:var(--font-display);
+    font-size:24px;
+    font-weight:600;
+    letter-spacing:0.01em;
+  }
+  .stat-value.amber{color:var(--amber);}
+  .stat-value.teal{color:var(--teal);}
+  .stat-value.coral{color:var(--coral);}
+  .stat-value.blue{color:var(--blue);}
+  .stat-value.purple{color:var(--purple);}
+
+  /* ---- Charts ---- */
+  .charts{
+    display:grid;
+    grid-template-columns:1.4fr 1fr;
+    gap:1px;
+    background:var(--line);
+    margin:20px 32px 0 32px;
+    border:1px solid var(--line);
+    border-radius:3px;
+    overflow:hidden;
+  }
+  .chart-card{
+    background:var(--ink-raised);
+    padding:20px;
+  }
+  .chart-title{
+    font-family:var(--font-mono);
+    font-size:11px;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    color:var(--dim);
+    margin:0 0 14px 0;
+  }
+  .chart-card canvas{max-height:260px;}
+
+  /* ---- Data Table ---- */
+  .table-section{
+    margin:20px 32px 40px 32px;
+  }
+  .table-controls{
+    display:flex;
+    gap:10px;
+    margin-bottom:12px;
+    flex-wrap:wrap;
+  }
+  .table-controls select{
+    background:var(--ink-raised);
+    color:var(--bone);
+    border:1px solid var(--line);
+    font-family:var(--font-mono);
+    font-size:12px;
+    padding:8px 10px;
+    border-radius:2px;
+  }
+  .table-wrapper{
+    overflow-x:auto;
+    border:1px solid var(--line);
+    border-radius:3px;
+  }
+  table{
+    width:100%;
+    border-collapse:collapse;
+    background:var(--ink-raised);
+    font-size:12px;
+  }
+  thead th{
+    text-align:left;
+    font-family:var(--font-mono);
+    font-size:10px;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    color:var(--dim);
+    padding:12px 14px;
+    border-bottom:1px solid var(--line);
+    cursor:pointer;
+    user-select:none;
+    white-space:nowrap;
+  }
+  thead th:hover{color:var(--amber);}
+  tbody td{
+    padding:12px 14px;
+    border-bottom:1px solid var(--line);
+    vertical-align:middle;
+  }
+  tbody tr:last-child td{border-bottom:none;}
+  tbody tr:hover{background:var(--ink-raised-2);}
+  .platform-tag{
+    font-family:var(--font-mono);
+    font-size:10px;
+    letter-spacing:0.05em;
+    text-transform:uppercase;
+    padding:3px 8px;
+    border-radius:2px;
+    background:var(--ink);
+    border:1px solid var(--line);
+    color:var(--teal);
+    white-space:nowrap;
+  }
+  .desc-cell{max-width:280px; color:var(--bone); opacity:0.9; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .num-cell{font-family:var(--font-mono); text-align:right; white-space:nowrap;}
+  .link-cell a{color:var(--amber); text-decoration:none; font-family:var(--font-mono); font-size:12px;}
+  .link-cell a:hover{text-decoration:underline;}
+
+  footer{
+    text-align:center;
+    color:var(--dim);
+    font-family:var(--font-mono);
+    font-size:11px;
+    padding:20px 0 30px 0;
+  }
+</style>
+</head>
+<body>
+
+  <div class="ticker-wrap">
+    <div class="ticker-track" id="tickerTrack"></div>
+  </div>
+
+  <header>
+    <div>
+      <p class="eyebrow">Meta Report &amp; Insights — Performance Desk</p>
+      <h1>Content Performance</h1>
+    </div>
+    <div class="editions" id="editions">
+      <button class="edition-btn active" data-edition="National">National</button>
+      <button class="edition-btn" data-edition="Kannada">Kannada</button>
+      <button class="edition-btn" data-edition="Tamil">Tamil</button>
+      <button class="edition-btn" data-edition="Telugu">Telugu</button>
+    </div>
+  </header>
+
+  <details class="config" open>
+    <summary>Connect live data</summary>
+    <div class="config-body">
+      <input id="csvUrl" type="text" placeholder="Paste your published Google Sheet CSV link for this edition here…">
+      <button id="loadBtn">Load live data</button>
+    </div>
+    <p class="config-note">
+      In Sheets: File → Share → Publish to web → choose the specific tab (e.g. <b>main_National</b>) and format <b>.csv</b> → Publish → copy the link here.
+      Each edition tab (National / Kannada / Tamil / Telugu) needs its own link. Until you connect one, sample data is shown below.
+    </p>
+    <div id="status">Showing sample data for: National</div>
+  </details>
+
+  <!-- Expanded KPI Parameters -->
+  <div class="scoreboard">
+    <div class="stat"><div class="stat-label">Total Posts</div><div class="stat-value" id="statPosts">–</div></div>
+    <div class="stat"><div class="stat-label">Total Views</div><div class="stat-value amber" id="statViews">–</div></div>
+    <div class="stat"><div class="stat-label">Impressions</div><div class="stat-value blue" id="statImpressions">–</div></div>
+    <div class="stat"><div class="stat-label">Reach</div><div class="stat-value purple" id="statReach">–</div></div>
+    <div class="stat"><div class="stat-label">Likes</div><div class="stat-value teal" id="statLikes">–</div></div>
+    <div class="stat"><div class="stat-label">Comments</div><div class="stat-value amber" id="statComments">–</div></div>
+    <div class="stat"><div class="stat-label">Shares</div><div class="stat-value coral" id="statShares">–</div></div>
+    <div class="stat"><div class="stat-label">Watch Time (hrs)</div><div class="stat-value blue" id="statWatchTime">–</div></div>
+    <div class="stat"><div class="stat-label">Avg CTR</div><div class="stat-value purple" id="statCtr">–</div></div>
+    <div class="stat"><div class="stat-label">Engagement Rate</div><div class="stat-value teal" id="statEng">–</div></div>
+  </div>
+
+  <div class="charts">
+    <div class="chart-card">
+      <p class="chart-title">Views &amp; Impressions by Platform</p>
+      <canvas id="platformChart"></canvas>
+    </div>
+    <div class="chart-card">
+      <p class="chart-title">Posts by Type</p>
+      <canvas id="typeChart"></canvas>
+    </div>
+  </div>
+
+  <div class="table-section">
+    <div class="table-controls">
+      <select id="filterPlatform"><option value="">All platforms</option></select>
+      <select id="filterType"><option value="">All post types</option></select>
+    </div>
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th data-key="platform">Platform</th>
+            <th data-key="postType">Type</th>
+            <th data-key="description">Description</th>
+            <th data-key="views">Views</th>
+            <th data-key="impressions">Impressions</th>
+            <th data-key="reach">Reach</th>
+            <th data-key="likes">Likes</th>
+            <th data-key="comments">Comments</th>
+            <th data-key="shares">Shares</th>
+            <th data-key="watchTime">Watch Time (m)</th>
+            <th data-key="ctr">CTR (%)</th>
+            <th>Link</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <footer>Content Performance Desk — refreshes each time this page is opened</footer>
+
+<script>
+/* ---------- Extended Sample Data ---------- */
+const SAMPLE_DATA = {
+  National: [
+    {platform:"Instagram", postType:"VIDEO", description:"Hockey World Cup Men's 2026 — full match highlights", views:955197, impressions:1240000, reach:850000, likes:40953, comments:3412, shares:2110, watchTime:4500, ctr:4.5, link:""},
+    {platform:"Instagram", postType:"CAROUSEL", description:"Hockey World Cup — defensive resilience breakdown", views:643093, impressions:890000, reach:520000, likes:12049, comments:890, shares:980, watchTime:0, ctr:3.8, link:""},
+    {platform:"Instagram", postType:"VIDEO", description:"Tennis star's dream signing — full announcement", views:192439, impressions:250000, reach:180000, likes:6654, comments:420, shares:410, watchTime:1200, ctr:5.1, link:""},
+    {platform:"Instagram", postType:"CAROUSEL", description:"New faces, big moves — transfer roundup", views:501193, impressions:610000, reach:410000, likes:2063, comments:180, shares:150, watchTime:0, ctr:2.9, link:""},
+    {platform:"X", postType:"VIDEO", description:"Match point: last minute drama recap", views:210044, impressions:310000, reach:190000, likes:8877, comments:650, shares:640, watchTime:850, ctr:6.2, link:""},
+    {platform:"X", postType:"IMAGE", description:"Player of the match — official graphic", views:88012, impressions:115000, reach:82000, likes:3021, comments:110, shares:210, watchTime:0, ctr:2.1, link:""},
+    {platform:"YouTube", postType:"VIDEO", description:"Post-match press conference — full video", views:340221, impressions:520000, reach:310000, likes:9902, comments:1450, shares:520, watchTime:18500, ctr:8.4, link:""},
+    {platform:"LinkedIn", postType:"IMAGE", description:"Season recap — organisational milestones", views:15230, impressions:22000, reach:14000, likes:640, comments:45, shares:55, watchTime:0, ctr:3.4, link:""},
+  ],
+  Kannada: [
+    {platform:"Instagram", postType:"VIDEO", description:"ಹಾಕಿ ವಿಶ್ವಕಪ್ ಹೈಲೈಟ್ಸ್", views:210044, impressions:290000, reach:190000, likes:8210, comments:410, shares:410, watchTime:1400, ctr:4.2, link:""},
+    {platform:"Instagram", postType:"CAROUSEL", description:"ಟೆನಿಸ್ ಆಟಗಾರನ ಸಹಿ ಸುದ್ದಿ", views:98211, impressions:130000, reach:88000, likes:2890, comments:140, shares:120, watchTime:0, ctr:3.1, link:""},
+    {platform:"YouTube", postType:"VIDEO", description:"ಪಂದ್ಯದ ನಂತರದ ಸಂದರ್ಶನ", views:64200, impressions:95000, reach:58000, likes:1980, comments:210, shares:88, watchTime:3200, ctr:6.5, link:""},
+  ],
+  Tamil: [
+    {platform:"Instagram", postType:"VIDEO", description:"ஹாக்கி உலகக் கோப்பை சிறப்பம்சங்கள்", views:301220, impressions:410000, reach:270000, likes:10540, comments:820, shares:601, watchTime:2100, ctr:4.8, link:""},
+    {platform:"Instagram", postType:"CAROUSEL", description:"டென்னிஸ் வீரர் ஒப்பந்தம்", views:110340, impressions:150000, reach:99000, likes:3420, comments:190, shares:190, watchTime:0, ctr:3.5, link:""},
+    {platform:"X", postType:"IMAGE", description:"போட்டி வீரர் அறிவிப்பு", views:52011, impressions:71000, reach:49000, likes:1440, comments:65, shares:70, watchTime:0, ctr:2.4, link:""},
+  ],
+  Telugu: [
+    {platform:"Instagram", postType:"VIDEO", description:"హాకీ వరల్డ్ కప్ హైలైట్స్", views:275400, impressions:380000, reach:240000, likes:9210, comments:630, shares:512, watchTime:1900, ctr:4.3, link:""},
+    {platform:"Instagram", postType:"CAROUSEL", description:"టెన్నిస్ సంతకం ప్రకటన", views:99110, impressions:135000, reach:87000, likes:2780, comments:130, shares:140, watchTime:0, ctr:3.0, link:""},
+    {platform:"YouTube", postType:"VIDEO", description:"మ్యాచ్ అనంతర ఇంటర్వ్యూ", views:58210, impressions:89000, reach:52000, likes:1650, comments:180, shares:75, watchTime:2900, ctr:5.9, link:""},
+  ]
+};
+
+let currentEdition = "National";
+let currentRows = SAMPLE_DATA.National;
+let sortKey = null, sortDir = 1;
+
+let platformChart, typeChart;
+
+function fmt(n){
+  if(n>=1000000) return (n/1000000).toFixed(1)+"M";
+  if(n>=1000) return (n/1000).toFixed(1)+"K";
+  return String(n);
+}
+
+function normalizeRow(r){
+  const get = (obj, keys) => {
+    for(const k of keys){
+      const found = Object.keys(obj).find(o => o.trim().toLowerCase() === k);
+      if(found !== undefined && obj[found] !== undefined && obj[found] !== "") return obj[found];
+    }
+    return "";
+  };
+  return {
+    platform: get(r,["platform"]) || "Unknown",
+    postType: get(r,["post type","posttype","type"]) || "Unknown",
+    description: get(r,["description"]) || "",
+    views: Number(String(get(r,["views"])).replace(/[^0-9.-]/g,"")) || 0,
+    impressions: Number(String(get(r,["impressions","imps"])).replace(/[^0-9.-]/g,"")) || 0,
+    reach: Number(String(get(r,["reach"])).replace(/[^0-9.-]/g,"")) || 0,
+    likes: Number(String(get(r,["likes"])).replace(/[^0-9.-]/g,"")) || 0,
+    comments: Number(String(get(r,["comments"])).replace(/[^0-9.-]/g,"")) || 0,
+    shares: Number(String(get(r,["shares"])).replace(/[^0-9.-]/g,"")) || 0,
+    watchTime: Number(String(get(r,["watch time","watchtime","watch time (m)"])).replace(/[^0-9.-]/g,"")) || 0,
+    ctr: Number(String(get(r,["ctr","ctr (%)"])).replace(/[^0-9.-]/g,"")) || 0,
+    link: get(r,["link","url"]) || ""
+  };
+}
+
+function renderAll(rows){
+  currentRows = rows;
+  renderScoreboard(rows);
+  renderCharts(rows);
+  populateFilters(rows);
+  renderTable(rows);
+  renderTicker(rows);
+}
+
+function renderScoreboard(rows){
+  const posts = rows.length;
+  const views = rows.reduce((a,r)=>a+r.views,0);
+  const impressions = rows.reduce((a,r)=>a+r.impressions,0);
+  const reach = rows.reduce((a,r)=>a+r.reach,0);
+  const likes = rows.reduce((a,r)=>a+r.likes,0);
+  const comments = rows.reduce((a,r)=>a+r.comments,0);
+  const shares = rows.reduce((a,r)=>a+r.shares,0);
+  const watchTimeMins = rows.reduce((a,r)=>a+r.watchTime,0);
+  const watchTimeHours = (watchTimeMins / 60).toFixed(1);
+  
+  const avgCtr = rows.length > 0 ? (rows.reduce((a,r)=>a+r.ctr,0) / rows.length).toFixed(1) + "%" : "–";
+  const eng = views > 0 ? (((likes + comments + shares) / views) * 100).toFixed(2) + "%" : "–";
+
+  document.getElementById("statPosts").textContent = posts;
+  document.getElementById("statViews").textContent = fmt(views);
+  document.getElementById("statImpressions").textContent = fmt(impressions);
+  document.getElementById("statReach").textContent = fmt(reach);
+  document.getElementById("statLikes").textContent = fmt(likes);
+  document.getElementById("statComments").textContent = fmt(comments);
+  document.getElementById("statShares").textContent = fmt(shares);
+  document.getElementById("statWatchTime").textContent = fmt(watchTimeHours);
+  document.getElementById("statCtr").textContent = avgCtr;
+  document.getElementById("statEng").textContent = eng;
+}
+
+function renderCharts(rows){
+  const byPlatformViews = {};
+  const byPlatformImps = {};
+  rows.forEach(r => { 
+    byPlatformViews[r.platform] = (byPlatformViews[r.platform] || 0) + r.views; 
+    byPlatformImps[r.platform] = (byPlatformImps[r.platform] || 0) + r.impressions;
+  });
+  const platforms = Object.keys(byPlatformViews);
+  const viewValues = platforms.map(p => byPlatformViews[p]);
+  const impValues = platforms.map(p => byPlatformImps[p]);
+
+  const byType = {};
+  rows.forEach(r => { byType[r.postType] = (byType[r.postType] || 0) + 1; });
+  const types = Object.keys(byType);
+  const typeValues = types.map(t => byType[t]);
+
+  const palette = ["#FFB92B","#3ECFA7","#FF6B57","#7C9CFF","#C792EA","#6EE7E7"];
+
+  if(platformChart) platformChart.destroy();
+  platformChart = new Chart(document.getElementById("platformChart"), {
+    type:"bar",
+    data:{ 
+      labels:platforms, 
+      datasets:[
+        { label:"Views", data:viewValues, backgroundColor:"#FFB92B", borderRadius:2, maxBarThickness:24 },
+        { label:"Impressions", data:impValues, backgroundColor:"#7C9CFF", borderRadius:2, maxBarThickness:24 }
+      ]
+    },
+    options:{
+      plugins:{ legend:{ display:true, labels:{ color:"#F2F0E9", font:{family:"Inter", size:10} } } },
+      scales:{
+        x:{ ticks:{color:"#8B90A0", font:{family:"JetBrains Mono", size:11}}, grid:{color:"#2B2F3A"} },
+        y:{ ticks:{color:"#8B90A0", font:{family:"JetBrains Mono", size:11}, callback:v=>fmt(v)}, grid:{color:"#2B2F3A"} }
+      }
+    }
+  });
+
+  if(typeChart) typeChart.destroy();
+  typeChart = new Chart(document.getElementById("typeChart"), {
+    type:"doughnut",
+    data:{ labels:types, datasets:[{ data:typeValues, backgroundColor:palette, borderColor:"#1B1E27", borderWidth:2 }]},
+    options:{
+      plugins:{ legend:{ position:"bottom", labels:{ color:"#F2F0E9", font:{family:"Inter", size:11}, boxWidth:10 } } }
+    }
+  });
+}
+
+function populateFilters(rows){
+  const platforms = [...new Set(rows.map(r=>r.platform))].sort();
+  const types = [...new Set(rows.map(r=>r.postType))].sort();
+  const fp = document.getElementById("filterPlatform");
+  const ft = document.getElementById("filterType");
+  fp.innerHTML = '<option value="">All platforms</option>' + platforms.map(p=>`<option value="${p}">${p}</option>`).join("");
+  ft.innerHTML = '<option value="">All post types</option>' + types.map(t=>`<option value="${t}">${t}</option>`).join("");
+}
+
+function renderTable(rows){
+  const fp = document.getElementById("filterPlatform").value;
+  const ft = document.getElementById("filterType").value;
+  let filtered = rows.filter(r => (!fp || r.platform===fp) && (!ft || r.postType===ft));
+
+  if(sortKey){
+    filtered = [...filtered].sort((a,b)=>{
+      const av=a[sortKey], bv=b[sortKey];
+      if(typeof av === "number") return (av-bv)*sortDir;
+      return String(av).localeCompare(String(bv))*sortDir;
+    });
+  }
+
+  const tbody = document.getElementById("tableBody");
+  tbody.innerHTML = filtered.map(r=>`
+    <tr>
+      <td><span class="platform-tag">${r.platform}</span></td>
+      <td>${r.postType}</td>
+      <td class="desc-cell" title="${r.description}">${r.description}</td>
+      <td class="num-cell">${r.views.toLocaleString()}</td>
+      <td class="num-cell">${r.impressions.toLocaleString()}</td>
+      <td class="num-cell">${r.reach.toLocaleString()}</td>
+      <td class="num-cell">${r.likes.toLocaleString()}</td>
+      <td class="num-cell">${r.comments.toLocaleString()}</td>
+      <td class="num-cell">${r.shares.toLocaleString()}</td>
+      <td class="num-cell">${r.watchTime.toLocaleString()}</td>
+      <td class="num-cell">${r.ctr}%</td>
+      <td class="link-cell">${r.link ? `<a href="${r.link}" target="_blank" rel="noopener">Open ↗</a>` : "—"}</td>
+    </tr>
+  `).join("") || `<tr><td colspan="12" style="text-align:center; color:var(--dim); padding:24px;">No posts match this filter.</td></tr>`;
+}
+
+function renderTicker(rows){
+  const top = [...rows].sort((a,b)=>b.views-a.views).slice(0,6);
+  const track = document.getElementById("tickerTrack");
+  const items = top.map(r => `<span>${r.platform.toUpperCase()} · ${r.description.slice(0,50)} — <b>${fmt(r.views)} views</b></span>`).join("");
+  track.innerHTML = items + items;
+}
+
+document.getElementById("filterPlatform").addEventListener("change", ()=>renderTable(currentRows));
+document.getElementById("filterType").addEventListener("change", ()=>renderTable(currentRows));
+
+document.querySelectorAll("thead th[data-key]").forEach(th=>{
+  th.addEventListener("click", ()=>{
+    const key = th.dataset.key;
+    sortDir = (sortKey===key) ? -sortDir : 1;
+    sortKey = key;
+    renderTable(currentRows);
+  });
+});
+
+document.querySelectorAll(".edition-btn").forEach(btn=>{
+  btn.addEventListener("click", ()=>{
+    document.querySelectorAll(".edition-btn").forEach(b=>b.classList.remove("active"));
+    btn.classList.add("active");
+    currentEdition = btn.dataset.edition;
+    document.getElementById("csvUrl").value = "";
+    document.getElementById("status").textContent = "Showing sample data for: " + currentEdition;
+    renderAll(SAMPLE_DATA[currentEdition] || []);
+  });
+});
+
+document.getElementById("loadBtn").addEventListener("click", ()=>{
+  const url = document.getElementById("csvUrl").value.trim();
+  const status = document.getElementById("status");
+  if(!url){ status.textContent = "Paste a published CSV link first."; return; }
+  status.textContent = "Loading live data…";
+  Papa.parse(url, {
+    download:true,
+    header:true,
+    skipEmptyLines:true,
+    complete: (res)=>{
+      if(!res.data || !res.data.length){
+        status.textContent = "No rows found — check the sheet is published and the link is correct.";
+        return;
+      }
+      const rows = res.data.map(normalizeRow).filter(r=>r.platform!=="Unknown" || r.views>0);
+      renderAll(rows);
+      status.textContent = `Live data loaded for ${currentEdition} — ${rows.length} posts (updates each time this page is reopened).`;
+    },
+    error: ()=>{
+      status.textContent = "Couldn't load that link. Make sure it's published as CSV and publicly viewable.";
+    }
+  });
+});
+
+/* initial render */
+renderAll(SAMPLE_DATA.National);
+</script>
+</body>
+</html>
